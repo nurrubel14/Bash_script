@@ -15,7 +15,7 @@ fi
 DOMAIN=$1
 WORDLIST=("www" "dev" "admin" "mail" "ftp" "test" "staging" "api" "vpn" "portal" "blog" "shop" "support" "ns1" "ns2")
 
-# --- Check if 'dig' is installed ---
+
 if ! command -v dig &> /dev/null; then
     echo -e "${RED}[!] Error: 'dig' is not installed. Please install dnsutils (sudo apt install dnsutils).${NC}"
     exit 1
@@ -25,13 +25,12 @@ echo -e "=========================================="
 echo -e " Starting Subdomain Recon on: ${GREEN}$DOMAIN${NC}"
 echo -e "=========================================="
 
-# --- Loop through the wordlist ---
+
 for sub in "${WORDLIST[@]}"; do
-    # Construct the full subdomain
+    
     FQDN="${sub}.${DOMAIN}"
     
-    # Query DNS for an A record (IPv4). 
-    # +short returns only the IP address, making it easy to parse.
+    
     IP=$(dig +short A "$FQDN")
     
     
