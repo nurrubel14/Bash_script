@@ -1,20 +1,20 @@
 #!/bin/bash
-# 1. Prompt the user for input
+#  Prompt the user for input
 read -p "Enter the IP address or domain to scan: " target_ip
 
-# 2. Check if the user actually typed something
+#  Check if the user actually typed something
 if [ -z "$target_ip" ]; then
     echo "Error: No IP address provided. Exiting."
     exit 1
 fi
 
-# 3. Check if Nmap is installed
+#  Check if Nmap is installed
 if ! command -v nmap &> /dev/null; then
     echo "Error: Nmap is not installed. Please install it first (e.g., sudo apt install nmap)."
     exit 1
 fi
 
-# 4. Run the Nmap scan
+#  Run the Nmap scan
 echo "----------------------------------------"
 echo "Starting Nmap scan on: $target_ip"
 echo "----------------------------------------"
