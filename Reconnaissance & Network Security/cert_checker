@@ -1,1 +1,51 @@
 
+#!/bin/bash
+
+read -p "Enter the domain: " DOMAIN
+
+if [ -z "$DOMAIN" ]; then
+    echo "No domain provided."
+    exit 1
+fi
+
+if ! command -v openssl &> /dev/null; then
+    echo "openssl not found."
+    exit 1
+fi
+
+echo "Connecting to $DOMAIN:443..."
+echo ""
+
+CERT=$(echo | openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" 2>/dev/null)
+
+if [ -z "$CERT" ]; then
+    echo "Could not connect to $DOMAIN on port 443."
+    exit 1
+fi
+
+ISSUER=$(echo "$CERT" | openssl x509 -noout -issuer 2>/dev/null | sed 's/^issuer=//')
+EXPIRY=$(echo "$CERT" | openssl x509 -noout -enddate 2>/dev/null | sed 's/^notAfter=//')
+SUBJECT=$(echo "$CERT" | openssl x509 -noout -subject 2>/dev/null | sed 's/^subject=//')
+SANS=$(echo "$CERT" | openssl x509 -noout -ext subjectAltName 2>/dev/null | tail -n +2 | sed 's/^ *//' | tr ',' '\n' | sed 's/^ *//')
+
+echo "Subject: $SUBJECT"
+echo "Issuer:  $ISSUER"
+echo "Expires: $EXPIRY"
+echo ""
+echo "SANs:"
+echo "$SANS"
+echo ""
+
+EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s 2>/dev/null)
+NOW_EPOCH=$(date +%s)
+
+if [ -n "$EXPIRY_EPOCH" ]; then
+    DAYS_LEFT=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
+    echo "Days until expiry: $DAYS_LEFT"
+
+    if [ "$DAYS_LEFT" -lt 0 ]; then
+        echo "Certificate has already expired."
+    elif [ "$DAYS_LEFT" -lt 30 ]; then
+        echo "Warning: certificate expires soon."
+    fi
+fi
