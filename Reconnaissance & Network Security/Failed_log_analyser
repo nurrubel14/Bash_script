@@ -1,0 +1,81 @@
+
+#!/bin/bash
+
+
+LOG_FILE="/var/log/auth.log"
+THRESHOLD=5
+
+echo "=========================================="
+echo "       SSH LOG SECURITY ANALYZER"
+echo "=========================================="
+
+# Check root privileges
+if [[ $EUID -ne 0 ]]; then
+    echo "[ERROR] Please run with sudo."
+    exit 1
+fi
+
+# Check log file
+if [[ ! -r "$LOG_FILE" ]]; then
+    echo "[ERROR] Cannot read authentication log."
+    exit 1
+fi
+
+echo "[INFO] Analyzing: $LOG_FILE"
+echo "[INFO] Detection threshold: $THRESHOLD"
+echo ""
+
+# Create a unique temporary file
+TEMP_FILE=$(mktemp) || {
+    echo "[ERROR] Cannot create temporary file."
+    exit 1
+}
+
+# Automatically remove temporary file on exit
+trap 'rm -f "$TEMP_FILE"' EXIT
+
+# Extract and count failed SSH login IP addresses
+grep "Failed password" "$LOG_FILE" |
+awk '{
+    for (i=1; i<=NF; i++) {
+        if ($i == "from") {
+            print $(i+1)
+        }
+    }
+}' |
+sort |
+uniq -c |
+sort -nr > "$TEMP_FILE"
+
+echo "FAILED LOGIN SUMMARY"
+echo "------------------------------------------"
+
+if [[ ! -s "$TEMP_FILE" ]]; then
+    echo "No failed SSH login attempts found."
+    exit 0
+fi
+
+cat "$TEMP_FILE"
+
+echo ""
+echo "POTENTIAL BRUTE FORCE SOURCES"
+echo "------------------------------------------"
+
+FOUND=0
+
+while read -r COUNT IP; do
+
+    if [[ "$COUNT" -ge "$THRESHOLD" ]]; then
+        echo "[ALERT] $IP - $COUNT failed attempts"
+        FOUND=1
+    fi
+
+done < "$TEMP_FILE"
+
+if [[ "$FOUND" -eq 0 ]]; then
+    echo "No IP exceeded the detection threshold."
+fi
+
+echo ""
+echo "[INFO] Analysis completed."
+echo "=========================================="
