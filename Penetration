@@ -1,4 +1,4 @@
-
+#!/bin/bash
 # 1. Prompt the user for input
 read -p "Enter the IP address or domain to scan: " target_ip
 
