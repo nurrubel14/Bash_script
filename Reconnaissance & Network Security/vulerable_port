@@ -1,0 +1,61 @@
+#!/bin/bash
+
+read -p "Enter the target IP: " TARGET
+
+if [ -z "$TARGET" ]; then
+    echo "No IP provided."
+    exit 1
+fi
+
+PORTS=(21 23 25 53 80 110 135 139 143 443 445 993 995 1433 1521 3306 3389 5432 5900 6379 8080 8443)
+TIMEOUT=1
+
+echo "Scanning $TARGET for risky ports..."
+echo ""
+
+OPEN_COUNT=0
+
+for port in "${PORTS[@]}"; do
+    if command -v nc &> /dev/null; then
+        nc -z -w "$TIMEOUT" "$TARGET" "$port" 2>/dev/null
+    else
+        timeout "$TIMEOUT" bash -c "echo > /dev/tcp/$TARGET/$port" 2>/dev/null
+    fi
+
+    if [ $? -eq 0 ]; then
+        case $port in
+            21) SERVICE="FTP" ;;
+            23) SERVICE="Telnet" ;;
+            25) SERVICE="SMTP" ;;
+            53) SERVICE="DNS" ;;
+            80) SERVICE="HTTP" ;;
+            110) SERVICE="POP3" ;;
+            135) SERVICE="MS RPC" ;;
+            139) SERVICE="NetBIOS" ;;
+            143) SERVICE="IMAP" ;;
+            443) SERVICE="HTTPS" ;;
+            445) SERVICE="SMB" ;;
+            993) SERVICE="IMAPS" ;;
+            995) SERVICE="POP3S" ;;
+            1433) SERVICE="MSSQL" ;;
+            1521) SERVICE="Oracle" ;;
+            3306) SERVICE="MySQL" ;;
+            3389) SERVICE="RDP" ;;
+            5432) SERVICE="PostgreSQL" ;;
+            5900) SERVICE="VNC" ;;
+            6379) SERVICE="Redis" ;;
+            8080) SERVICE="HTTP Alt" ;;
+            8443) SERVICE="HTTPS Alt" ;;
+            *) SERVICE="Unknown" ;;
+        esac
+        echo "[OPEN] Port $port ($SERVICE)"
+        OPEN_COUNT=$((OPEN_COUNT + 1))
+    fi
+done
+
+echo ""
+if [ "$OPEN_COUNT" -eq 0 ]; then
+    echo "No risky ports open on $TARGET."
+else
+    echo "Found $OPEN_COUNT open risky port(s) on $TARGET."
+fi
